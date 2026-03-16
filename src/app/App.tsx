@@ -10,6 +10,13 @@ import { PhysiologicalSignalsDialog } from './components/PhysiologicalSignalsDia
 import { SleepActivityDialog } from './components/SleepActivityDialog';
 import { CardiovascularDialog } from './components/CardiovascularDialog';
 
+interface VisualReadings {
+  dominantEmotion: string | null;
+  emotionConfidence: number;
+  stressLevel: number;
+  hasFace: boolean;
+}
+
 interface HealthModule {
   id: string;
   title: string;
@@ -66,6 +73,60 @@ export default function App() {
   ]);
 
   const [openDialog, setOpenDialog] = useState<string | null>(null);
+
+  const updateVisualSignalsScore = ({
+    dominantEmotion,
+    emotionConfidence,
+    stressLevel,
+    hasFace,
+  }: VisualReadings) => {
+    setModules((prev) =>
+      prev.map((module) => {
+        if (module.id !== 'visual') return module;
+
+        if (!module.enabled) {
+          return {
+            ...module,
+            subtitle: 'Tracking paused',
+            trend: 'stable',
+          };
+        }
+
+        if (!hasFace || !dominantEmotion) {
+          return {
+            ...module,
+            subtitle: 'Scanning for face signal',
+            trend: 'stable',
+          };
+        }
+
+        const positive = new Set(['happy', 'surprised']);
+        const neutral = new Set(['neutral']);
+
+        let emotionPenalty = 14;
+        if (positive.has(dominantEmotion)) emotionPenalty = 0;
+        else if (neutral.has(dominantEmotion)) emotionPenalty = 7;
+
+        const targetScore = Math.max(
+          20,
+          Math.min(100, Math.round(100 - stressLevel * 0.6 - emotionPenalty))
+        );
+
+        const nextScore = Math.round(module.score * 0.72 + targetScore * 0.28);
+        const nextTrend: 'up' | 'down' | 'stable' =
+          nextScore > module.score ? 'up' : nextScore < module.score ? 'down' : 'stable';
+
+        const subtitle = `${dominantEmotion[0].toUpperCase()}${dominantEmotion.slice(1)} · Stress ${stressLevel}% · Conf ${Math.round(emotionConfidence * 100)}%`;
+
+        return {
+          ...module,
+          score: nextScore,
+          subtitle,
+          trend: nextTrend,
+        };
+      })
+    );
+  };
 
   const toggleModule = (id: string) => {
     setModules((prev) =>
@@ -127,6 +188,7 @@ export default function App() {
         onOpenChange={(open) => !open && setOpenDialog(null)}
         isEnabled={getModule('visual').enabled}
         onToggle={() => toggleModule('visual')}
+        onReadingsChange={updateVisualSignalsScore}
       />
 
       <PhysiologicalSignalsDialog

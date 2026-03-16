@@ -13,6 +13,12 @@ interface VisualSignalsDialogProps {
   onOpenChange: (open: boolean) => void;
   isEnabled: boolean;
   onToggle: () => void;
+  onReadingsChange?: (readings: {
+    dominantEmotion: string | null;
+    emotionConfidence: number;
+    stressLevel: number;
+    hasFace: boolean;
+  }) => void;
 }
 
 export function VisualSignalsDialog({
@@ -20,14 +26,26 @@ export function VisualSignalsDialog({
   onOpenChange,
   isEnabled,
   onToggle,
+  onReadingsChange,
 }: VisualSignalsDialogProps) {
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const processingVideoRef = useRef<HTMLVideoElement>(null);
+  const displayVideoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const loopActiveRef = useRef(false);
   const [isModelsLoaded, setIsModelsLoaded] = useState(false);
   const [isVideoReady, setIsVideoReady] = useState(false);
   const [dominantEmotion, setDominantEmotion] = useState<{ emotion: string; score: number } | null>(null);
   const [stressLevel, setStressLevel] = useState<number>(0);
   const loopRef = useRef<number | undefined>(undefined);
+
+  const emitReadings = (payload: {
+    dominantEmotion: string | null;
+    emotionConfidence: number;
+    stressLevel: number;
+    hasFace: boolean;
+  }) => {
+    onReadingsChange?.(payload);
+  };
 
   useEffect(() => {
     const loadModels = async () => {
@@ -58,9 +76,31 @@ export function VisualSignalsDialog({
 
   const startVideo = async () => {
     try {
+      if (streamRef.current && processingVideoRef.current) {
+        processingVideoRef.current.srcObject = streamRef.current;
+        try {
+          await processingVideoRef.current.play();
+        } catch {
+          // Best effort only; browser may gate autoplay until user interaction.
+        }
+        if (displayVideoRef.current && open) {
+          displayVideoRef.current.srcObject = streamRef.current;
+        }
+        setIsVideoReady(true);
+        return;
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
+      if (processingVideoRef.current) {
+        processingVideoRef.current.srcObject = stream;
+        try {
+          await processingVideoRef.current.play();
+        } catch {
+          // Best effort only; browser may gate autoplay until user interaction.
+        }
+      }
+      if (displayVideoRef.current && open) {
+        displayVideoRef.current.srcObject = stream;
       }
       streamRef.current = stream;
       setIsVideoReady(true);
@@ -70,6 +110,7 @@ export function VisualSignalsDialog({
   };
 
   const stopVideo = () => {
+    loopActiveRef.current = false;
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
@@ -78,21 +119,47 @@ export function VisualSignalsDialog({
       cancelAnimationFrame(loopRef.current);
       loopRef.current = undefined;
     }
+    if (processingVideoRef.current) {
+      processingVideoRef.current.srcObject = null;
+    }
+    if (displayVideoRef.current) {
+      displayVideoRef.current.srcObject = null;
+    }
     setIsVideoReady(false);
     setDominantEmotion(null);
     setStressLevel(0);
+    emitReadings({
+      dominantEmotion: null,
+      emotionConfidence: 0,
+      stressLevel: 0,
+      hasFace: false,
+    });
   };
 
-  const handleVideoPlay = () => {
+  const startDetectionLoop = () => {
+    if (loopActiveRef.current) return;
+    loopActiveRef.current = true;
+
     let lastFaceSeen = Date.now();
     let lastStateUpdate = 0;
     
     const detect = async () => {
-      if (!videoRef.current || videoRef.current.paused || videoRef.current.ended) return;
+      if (!loopActiveRef.current) return;
 
-      const results = await faceapi
-        .detectSingleFace(videoRef.current, new faceapi.TinyFaceDetectorOptions())
-        .withFaceExpressions();
+      const videoEl = processingVideoRef.current;
+      if (!videoEl || videoEl.paused || videoEl.ended || videoEl.readyState < 2) {
+        loopRef.current = requestAnimationFrame(detect);
+        return;
+      }
+
+      let results: faceapi.WithFaceExpressions<faceapi.WithFaceDetection<{}>> | undefined;
+      try {
+        results = await faceapi
+          .detectSingleFace(videoEl, new faceapi.TinyFaceDetectorOptions())
+          .withFaceExpressions();
+      } catch (err) {
+        console.error("Visual signals detection failed:", err);
+      }
 
       const now = Date.now();
       
@@ -105,52 +172,88 @@ export function VisualSignalsDialog({
           const sorted = Object.entries(expressions).sort((a, b) => b[1] - a[1]);
           if (sorted.length > 0) {
             setDominantEmotion({ emotion: sorted[0][0], score: sorted[0][1] });
+            const nextStress = calculateStress(expressions);
+            setStressLevel(nextStress);
+            emitReadings({
+              dominantEmotion: sorted[0][0],
+              emotionConfidence: sorted[0][1],
+              stressLevel: nextStress,
+              hasFace: true,
+            });
+          } else {
+            setStressLevel(0);
+            emitReadings({
+              dominantEmotion: null,
+              emotionConfidence: 0,
+              stressLevel: 0,
+              hasFace: false,
+            });
           }
-          setStressLevel(calculateStress(expressions));
           lastStateUpdate = now;
         }
       } else {
         // Clear data if we haven't seen a face for a long time (e.g. 5+ seconds)
         if (now - lastFaceSeen > 5000) {
           setDominantEmotion(null);
+          setStressLevel(0);
+          emitReadings({
+            dominantEmotion: null,
+            emotionConfidence: 0,
+            stressLevel: 0,
+            hasFace: false,
+          });
           lastStateUpdate = 0; // Reset update timer
         }
       }
 
       loopRef.current = requestAnimationFrame(detect);
     };
-    detect();
+    loopRef.current = requestAnimationFrame(detect);
   };
 
   useEffect(() => {
-    if (open && isEnabled && isModelsLoaded) {
-      startVideo();
+    if (isEnabled && isModelsLoaded) {
+      startVideo().then(() => {
+        startDetectionLoop();
+      });
     } else {
       stopVideo();
     }
     return () => {
       stopVideo();
     };
-  }, [open, isEnabled, isModelsLoaded]);
+  }, [isEnabled, isModelsLoaded]);
+
+  useEffect(() => {
+    if (!displayVideoRef.current) return;
+    if (!open) {
+      displayVideoRef.current.srcObject = null;
+      return;
+    }
+    displayVideoRef.current.srcObject = streamRef.current;
+  }, [open, isVideoReady]);
 
   return (
-    <ModuleDialogBase
-      open={open}
-      onOpenChange={onOpenChange}
-      icon={Eye}
-      title="Visual Signals"
-      description="Real-time facial analysis for emotion and stress detection"
-      headerGradient="bg-gradient-to-r from-purple-600 to-violet-700"
-      isEnabled={isEnabled}
-      onToggle={onToggle}
-      privacyNote="Camera data is processed locally in real-time. No video is stored or transmitted. Captured frames are anonymised before analysis and deleted immediately after processing."
-      footerActions={[
-        { label: "Review Screenshots", icon: ImageIcon },
-        { label: "Export Data", icon: Download },
-        { label: "Pause Tracking", icon: PauseCircle },
-        { label: "Delete Visual Data", icon: Trash2, danger: true },
-      ]}
-    >
+    <>
+      <video ref={processingVideoRef} autoPlay muted playsInline className="hidden" />
+
+      <ModuleDialogBase
+        open={open}
+        onOpenChange={onOpenChange}
+        icon={Eye}
+        title="Visual Signals"
+        description="Real-time facial analysis for emotion and stress detection"
+        headerGradient="bg-gradient-to-r from-purple-600 to-violet-700"
+        isEnabled={isEnabled}
+        onToggle={onToggle}
+        privacyNote="Camera data is processed locally in real-time. No video is stored or transmitted. Captured frames are anonymised before analysis and deleted immediately after processing."
+        footerActions={[
+          { label: "Review Screenshots", icon: ImageIcon },
+          { label: "Export Data", icon: Download },
+          { label: "Pause Tracking", icon: PauseCircle },
+          { label: "Delete Visual Data", icon: Trash2, danger: true },
+        ]}
+      >
       {/* ── Live Camera Feed ───────────────────────── */}
       <div>
         <div className="mb-2.5 flex items-center justify-between">
@@ -169,11 +272,10 @@ export function VisualSignalsDialog({
         <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 shadow-inner">
           <div className="relative flex h-72 flex-col items-center justify-center">
             <video
-              ref={videoRef}
+              ref={displayVideoRef}
               autoPlay
               muted
               playsInline
-              onPlay={handleVideoPlay}
               className="absolute inset-0 h-full w-full object-cover rounded-xl"
             />
             {(!isVideoReady || !isModelsLoaded) && (
@@ -304,6 +406,7 @@ export function VisualSignalsDialog({
               ]
         }
       />
-    </ModuleDialogBase>
+      </ModuleDialogBase>
+    </>
   );
 }
