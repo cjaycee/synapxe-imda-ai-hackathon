@@ -1,6 +1,7 @@
-import { Camera, ImageIcon, Download, PauseCircle, Trash2, Eye, Zap } from "lucide-react";
+import { Camera, ImageIcon, Download, PauseCircle, Trash2, Eye, Zap, Activity } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import * as faceapi from "face-api.js";
+import { LineChart, Line, ResponsiveContainer, YAxis } from "recharts";
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import {
@@ -22,11 +23,16 @@ export function VisualSignalsDialog({
   onToggle,
 }: VisualSignalsDialogProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [isModelsLoaded, setIsModelsLoaded] = useState(false);
   const [isVideoReady, setIsVideoReady] = useState(false);
   const [dominantEmotion, setDominantEmotion] = useState<{ emotion: string; score: number } | null>(null);
   const [stressLevel, setStressLevel] = useState<number>(0);
+  const [rppgData, setRppgData] = useState<{ time: number; value: number }[]>([]);
+  const [bpm, setBpm] = useState<number | null>(null);
+  
+  const rppgBuffer = useRef<number[]>([]);
   const loopRef = useRef<number | undefined>(undefined);
 
   useEffect(() => {
@@ -44,13 +50,21 @@ export function VisualSignalsDialog({
     loadModels();
   }, []);
 
-  const calculateStress = (expressions: faceapi.FaceExpressions) => {
+  const calculateStress = (expressions: faceapi.FaceExpressions, currentBpm: number | null) => {
     const negEmotions = ["sad", "angry", "fearful", "disgusted"];
     let stressScore = 0;
     negEmotions.forEach((e) => {
       stressScore += (expressions as unknown as Record<string, number>)[e] || 0;
     });
-    return Math.min(100, Math.round(stressScore * 100 * 1.5));
+    
+    let calculatedStress = stressScore * 100 * 1.5;
+    
+    // Add BPM factor if available
+    if (currentBpm && currentBpm > 85) {
+      calculatedStress += (currentBpm - 85) * 0.5;
+    }
+    
+    return Math.min(100, Math.round(calculatedStress));
   };
 
   const startVideo = async () => {
@@ -78,6 +92,70 @@ export function VisualSignalsDialog({
     setIsVideoReady(false);
     setDominantEmotion(null);
     setStressLevel(0);
+    setRppgData([]);
+    setBpm(null);
+    rppgBuffer.current = [];
+  };
+
+  const processRPPG = (box: faceapi.Box<any>, videoEl: HTMLVideoElement) => {
+    if (!canvasRef.current || videoEl.readyState < 2) return;
+    const ctx = canvasRef.current.getContext("2d", { willReadFrequently: true });
+    if (!ctx) return;
+
+    canvasRef.current.width = box.width;
+    canvasRef.current.height = box.height;
+    
+    ctx.drawImage(
+      videoEl,
+      box.x, box.y, box.width, box.height,
+      0, 0, box.width, box.height
+    );
+
+    const imageData = ctx.getImageData(0, 0, box.width, box.height).data;
+    let greenSum = 0;
+    const pixelCount = box.width * box.height;
+
+    for (let i = 0; i < pixelCount; i++) {
+      greenSum += imageData[i * 4 + 1];
+    }
+    
+    const avgGreen = greenSum / pixelCount;
+    
+    rppgBuffer.current.push(avgGreen);
+    if (rppgBuffer.current.length > 150) {
+      rppgBuffer.current.shift();
+    }
+
+    const now = Date.now();
+    setRppgData((prev) => {
+      const newData = [...prev, { time: now, value: avgGreen }];
+      if (newData.length > 60) newData.shift();
+      return newData;
+    });
+
+    if (rppgBuffer.current.length > 90) {
+      const buffer = rppgBuffer.current;
+      let peaks = 0;
+      
+      const sum = buffer.reduce((a, b) => a + b, 0);
+      const avg = sum / buffer.length;
+      
+      let isAbove = buffer[0] > avg;
+      for (let i = 1; i < buffer.length; i++) {
+        const currentlyAbove = buffer[i] > avg;
+        if (!isAbove && currentlyAbove) {
+          peaks++;
+        }
+        isAbove = currentlyAbove;
+      }
+      
+      const durationInMinutes = (buffer.length / 30) / 60;
+      const calculatedBpm = Math.round(peaks / durationInMinutes);
+      
+      if (calculatedBpm > 40 && calculatedBpm < 180) {
+        setBpm(calculatedBpm);
+      }
+    }
   };
 
   const handleVideoPlay = () => {
@@ -96,20 +174,26 @@ export function VisualSignalsDialog({
       if (results) {
         lastFaceSeen = now;
         
-        // Only update UI states every 5 seconds
-        if (now - lastStateUpdate > 5000) {
+        // Fast update: rPPG runs on every valid tracked frame
+        processRPPG(results.detection.box, videoRef.current);
+        
+        // Throttled update: refresh UI emotion and stress state every 500ms
+        if (now - lastStateUpdate > 500) {
           const expressions = results.expressions;
           const sorted = Object.entries(expressions).sort((a, b) => b[1] - a[1]);
           if (sorted.length > 0) {
             setDominantEmotion({ emotion: sorted[0][0], score: sorted[0][1] });
           }
-          setStressLevel(calculateStress(expressions));
+          setStressLevel(calculateStress(expressions, bpm));
           lastStateUpdate = now;
         }
       } else {
         // Clear data if we haven't seen a face for a long time (e.g. 5+ seconds)
         if (now - lastFaceSeen > 5000) {
           setDominantEmotion(null);
+          setBpm(null);
+          setRppgData([]);
+          rppgBuffer.current = [];
           lastStateUpdate = 0; // Reset update timer
         }
       }
@@ -165,6 +249,9 @@ export function VisualSignalsDialog({
 
         <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 shadow-inner">
           <div className="relative flex h-72 flex-col items-center justify-center">
+            {/* Hidden canvas for rPPG pixel extraction */}
+            <canvas ref={canvasRef} className="hidden" />
+            
             <video
               ref={videoRef}
               autoPlay
@@ -245,14 +332,43 @@ export function VisualSignalsDialog({
         <Card className="border-l-4 border-l-violet-300 bg-white p-5 shadow-none">
           <div className="mb-3 flex items-center justify-between">
             <h3 className="text-sm font-semibold text-gray-800">rPPG</h3>
-            <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-gray-300" />
+            <span className={`inline-block h-2 w-2 rounded-full ${rppgData.length > 0 ? 'bg-violet-500' : 'bg-gray-300 animate-pulse'}`} />
           </div>
-          <div className="flex h-20 flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-100 bg-gray-50">
-            <div className="h-3 w-20 rounded-full bg-gray-200 opacity-60" />
-            <p className="text-[11px] text-gray-400">Initialising…</p>
+          <div className="flex h-20 flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-gray-100 bg-gray-50 overflow-hidden relative">
+            {rppgData.length > 10 ? (
+              <>
+                <div className="absolute inset-0 pt-2 opacity-50">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={rppgData}>
+                      <YAxis domain={['auto', 'auto']} hide />
+                      <Line 
+                        type="monotone" 
+                        dataKey="value" 
+                        stroke="#8b5cf6" 
+                        strokeWidth={2} 
+                        dot={false}
+                        isAnimationActive={false}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="z-10 flex flex-col items-center">
+                  <div className="flex items-center gap-1.5 text-violet-700">
+                    <Activity className="h-4 w-4" />
+                    <span className="text-2xl font-bold">{bpm || '--'}</span>
+                  </div>
+                  <p className="text-[10px] uppercase tracking-wider text-violet-500 font-semibold bg-white/70 px-2 rounded backdrop-blur-sm">BPM</p>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="h-3 w-20 rounded-full bg-gray-200 opacity-60" />
+                <p className="text-[11px] text-gray-400">Initialising pulse…</p>
+              </>
+            )}
           </div>
           <p className="mt-2.5 text-center text-[10px] text-gray-400">
-            Remote Photoplethysmography · BPM
+            Remote Photoplethysmography
           </p>
         </Card>
 
@@ -303,8 +419,11 @@ export function VisualSignalsDialog({
                   text: `Currently detecting ${dominantEmotion.emotion} with ${Math.round(dominantEmotion.score * 100)}% confidence.`,
                 },
                 {
-                  text: `Stress level is currently estimated at ${stressLevel}% based on negative emotion markers.`,
+                  text: `Stress level is currently estimated at ${stressLevel}% based on emotion markers${bpm ? ' and elevated BPM' : ''}.`,
                 },
+                ...(bpm ? [{
+                  text: `rPPG has locked onto a consistent pulse signal estimating ${bpm} Beats Per Minute.`,
+                }] : []),
               ]
             : [
                 {
