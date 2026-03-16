@@ -369,11 +369,11 @@ export function ModuleDialogBase({
           </div>
 
           {/* ── Privacy Footer ──────────────────────────── */}
-          <div className="shrink-0 border-t bg-white px-6 py-4">
+          <div className="shrink-0 border-t bg-white px-6 py-2.5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-start gap-2">
-                <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gray-400" />
-                <p className="text-[11px] leading-relaxed text-gray-500">
+                <Lock className="mt-px h-3 w-3 shrink-0 text-gray-400" />
+                <p className="text-[10px] leading-snug text-gray-500">
                   {privacyNote}
                 </p>
               </div>
