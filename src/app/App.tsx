@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { CloudSun, Moon, Activity, Eye, LucideIcon } from 'lucide-react';
 import { DashboardNav } from './components/DashboardNav';
 import { HealthScoreHero } from './components/HealthScoreHero';
@@ -12,6 +12,8 @@ import {
     EnvironmentDialog,
     type EnvironmentalSimulationPayload,
 } from './components/EnvironmentDialog';
+import { buildHealthContext } from '../lib/sealion/contextBuilder';
+import { type ModuleSnapshot } from '../lib/sealion/types';
 
 interface VisualReadings {
     dominantEmotion: string | null;
@@ -77,6 +79,9 @@ export default function App() {
     ]);
 
     const [openDialog, setOpenDialog] = useState<string | null>(null);
+    const [latestVisualReadings, setLatestVisualReadings] = useState<VisualReadings | null>(null);
+    const [latestSleepUpdate, setLatestSleepUpdate] = useState<SleepScoreUpdate | null>(null);
+    const [latestEnvironmentalUpdate, setLatestEnvironmentalUpdate] = useState<EnvironmentalSimulationPayload | null>(null);
 
     const updateVisualSignalsScore = ({
         dominantEmotion,
@@ -85,6 +90,14 @@ export default function App() {
         hasFace,
         avgScore1Min,
     }: VisualReadings) => {
+        setLatestVisualReadings({
+            dominantEmotion,
+            emotionConfidence,
+            stressLevel,
+            hasFace,
+            avgScore1Min,
+        });
+
         setModules((prev) =>
             prev.map((module) => {
                 if (module.id !== 'visual') return module;
@@ -132,6 +145,12 @@ export default function App() {
         confidence,
         reading,
     }: SleepScoreUpdate) => {
+        setLatestSleepUpdate({
+            predictedScore,
+            confidence,
+            reading,
+        });
+
         setModules((prev) =>
             prev.map((module) => {
                 if (module.id !== 'sleep') return module;
@@ -187,6 +206,8 @@ export default function App() {
         trend,
         subtitle,
     }: EnvironmentalSimulationPayload) => {
+        setLatestEnvironmentalUpdate({ score, trend, subtitle });
+
         setModules((prev) =>
             prev.map((module) => {
                 if (module.id !== 'environmental') return module;
@@ -210,6 +231,24 @@ export default function App() {
     };
 
     const getModule = (id: string) => modules.find((m) => m.id === id)!;
+
+    const assistantContext = useMemo(
+        () =>
+            buildHealthContext({
+                modules: modules.map<ModuleSnapshot>((module) => ({
+                    id: module.id,
+                    title: module.title,
+                    score: module.score,
+                    subtitle: module.subtitle,
+                    enabled: module.enabled,
+                    trend: module.trend,
+                })),
+                visual: latestVisualReadings,
+                sleep: latestSleepUpdate,
+                environmental: latestEnvironmentalUpdate,
+            }),
+        [modules, latestVisualReadings, latestSleepUpdate, latestEnvironmentalUpdate]
+    );
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -249,7 +288,7 @@ export default function App() {
                         <FacialTrackingLogs />
                     </div>
                     <div className="lg:col-span-1">
-                        <AIHealthAssistant />
+                        <AIHealthAssistant healthContext={assistantContext} />
                     </div>
                 </div>
             </main>
