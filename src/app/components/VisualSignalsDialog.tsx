@@ -1,5 +1,5 @@
-import { Camera, ImageIcon, Download, PauseCircle, Trash2, Eye, Zap } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { Camera, ImageIcon, Download, PauseCircle, Trash2, Eye, Zap, Clock, BarChart3 } from "lucide-react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import * as faceapi from "face-api.js";
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
@@ -18,7 +18,52 @@ interface VisualSignalsDialogProps {
     emotionConfidence: number;
     stressLevel: number;
     hasFace: boolean;
+    avgScore1Min?: number;
   }) => void;
+}
+
+interface ScoreEntry {
+  timestamp: number;
+  score: number;
+}
+
+const AVERAGE_WINDOWS = [
+  { label: "1 min", ms: 60_000 },
+  { label: "15 min", ms: 15 * 60_000 },
+  { label: "30 min", ms: 30 * 60_000 },
+  { label: "1 hour", ms: 60 * 60_000 },
+  { label: "12 hours", ms: 12 * 60 * 60_000 },
+  { label: "1 day", ms: 24 * 60 * 60_000 },
+] as const;
+
+// Dummy placeholder values for windows without enough data
+const DUMMY_SCORES: Record<string, number> = {
+  "1 min": 72,
+  "15 min": 68,
+  "30 min": 65,
+  "1 hour": 61,
+  "12 hours": 58,
+  "1 day": 55,
+};
+
+function computeRollingAverages(
+  history: ScoreEntry[],
+  now: number
+): { label: string; value: number; isEstimate: boolean }[] {
+  return AVERAGE_WINDOWS.map(({ label, ms }) => {
+    const cutoff = now - ms;
+    const relevant = history.filter((e) => e.timestamp >= cutoff);
+    // Require at least 3 data points AND at least 80% of the window elapsed
+    const windowStart = history.length > 0 ? history[0].timestamp : now;
+    const elapsedMs = now - windowStart;
+    const hasEnoughData = relevant.length >= 3 && elapsedMs >= ms * 0.8;
+
+    if (hasEnoughData) {
+      const avg = Math.round(relevant.reduce((s, e) => s + e.score, 0) / relevant.length);
+      return { label, value: Math.min(100, Math.max(0, avg)), isEstimate: false };
+    }
+    return { label, value: DUMMY_SCORES[label], isEstimate: true };
+  });
 }
 
 export function VisualSignalsDialog({
@@ -37,12 +82,15 @@ export function VisualSignalsDialog({
   const [dominantEmotion, setDominantEmotion] = useState<{ emotion: string; score: number } | null>(null);
   const [stressLevel, setStressLevel] = useState<number>(0);
   const loopRef = useRef<number | undefined>(undefined);
+  const scoreHistoryRef = useRef<ScoreEntry[]>([]);
+  const [averages, setAverages] = useState(() => computeRollingAverages([], Date.now()));
 
   const emitReadings = (payload: {
     dominantEmotion: string | null;
     emotionConfidence: number;
     stressLevel: number;
     hasFace: boolean;
+    avgScore1Min?: number;
   }) => {
     onReadingsChange?.(payload);
   };
@@ -72,6 +120,22 @@ export function VisualSignalsDialog({
     const calculatedStress = stressScore * 100 * 1.5;
     
     return Math.min(100, Math.round(calculatedStress));
+  };
+
+  /** Convert a stress level (0-100, higher = worse) into a wellness score (0-100, higher = better) */
+  const stressToScore = (stress: number) => Math.max(0, Math.min(100, 100 - stress));
+
+  const pushScoreAndRecompute = (stress: number) => {
+    const now = Date.now();
+    const score = stressToScore(stress);
+    scoreHistoryRef.current.push({ timestamp: now, score });
+    // Prune entries older than 24 hours to keep memory bounded
+    const dayAgo = now - 24 * 60 * 60_000;
+    scoreHistoryRef.current = scoreHistoryRef.current.filter((e) => e.timestamp >= dayAgo);
+    const avgs = computeRollingAverages(scoreHistoryRef.current, now);
+    setAverages(avgs);
+    // Return the 1-min average value
+    return avgs[0].value;
   };
 
   const startVideo = async () => {
@@ -174,11 +238,13 @@ export function VisualSignalsDialog({
             setDominantEmotion({ emotion: sorted[0][0], score: sorted[0][1] });
             const nextStress = calculateStress(expressions);
             setStressLevel(nextStress);
+            const avg1Min = pushScoreAndRecompute(nextStress);
             emitReadings({
               dominantEmotion: sorted[0][0],
               emotionConfidence: sorted[0][1],
               stressLevel: nextStress,
               hasFace: true,
+              avgScore1Min: avg1Min,
             });
           } else {
             setStressLevel(0);
@@ -378,6 +444,43 @@ export function VisualSignalsDialog({
           </p>
         </Card>
       </div>
+
+      {/* ── Average Scores ────────────────────────── */}
+      <Card className="border-l-4 border-l-violet-300 bg-white p-5 shadow-none">
+        <div className="mb-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4 text-violet-500" />
+            <h3 className="text-sm font-semibold text-gray-800">Average Scores</h3>
+          </div>
+          <span className={`inline-block h-2 w-2 rounded-full ${dominantEmotion ? 'bg-violet-500' : 'bg-gray-300 animate-pulse'}`} />
+        </div>
+        <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
+          {averages.map((avg) => (
+            <div
+              key={avg.label}
+              className="flex flex-col items-center gap-1 rounded-lg border border-gray-100 bg-gray-50 py-3 px-2 transition-colors hover:bg-violet-50"
+            >
+              <div className="flex items-center gap-1 text-[10px] font-medium text-gray-500">
+                <Clock className="h-3 w-3" />
+                {avg.label}
+              </div>
+              <span
+                className={`text-lg font-bold ${
+                  avg.isEstimate ? 'text-gray-400' : avg.value >= 70 ? 'text-green-600' : avg.value >= 45 ? 'text-yellow-600' : 'text-orange-600'
+                }`}
+              >
+                {avg.value}
+              </span>
+              {avg.isEstimate && (
+                <span className="text-[9px] text-gray-400">(est.)</span>
+              )}
+            </div>
+          ))}
+        </div>
+        <p className="mt-2.5 text-center text-[10px] text-gray-400">
+          Wellness score (0–100) · higher is better · inverted from stress level
+        </p>
+      </Card>
 
       {/* ── AI Insights ─────────────────────────────── */}
       <InsightsCard

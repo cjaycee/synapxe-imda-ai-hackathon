@@ -18,6 +18,7 @@ interface VisualReadings {
     emotionConfidence: number;
     stressLevel: number;
     hasFace: boolean;
+    avgScore1Min?: number;
 }
 
 interface HealthModule {
@@ -82,6 +83,7 @@ export default function App() {
         emotionConfidence,
         stressLevel,
         hasFace,
+        avgScore1Min,
     }: VisualReadings) => {
         setModules((prev) =>
             prev.map((module) => {
@@ -103,17 +105,24 @@ export default function App() {
                     };
                 }
 
-                const positive = new Set(['happy', 'surprised']);
-                const neutral = new Set(['neutral']);
+                // Use the 1-min rolling average as the score when available,
+                // otherwise fall back to the instantaneous weighted formula.
+                let targetScore: number;
+                if (avgScore1Min != null) {
+                    targetScore = Math.max(20, Math.min(100, avgScore1Min));
+                } else {
+                    const positive = new Set(['happy', 'surprised']);
+                    const neutral = new Set(['neutral']);
 
-                let emotionPenalty = 14;
-                if (positive.has(dominantEmotion)) emotionPenalty = 0;
-                else if (neutral.has(dominantEmotion)) emotionPenalty = 7;
+                    let emotionPenalty = 14;
+                    if (positive.has(dominantEmotion)) emotionPenalty = 0;
+                    else if (neutral.has(dominantEmotion)) emotionPenalty = 7;
 
-                const targetScore = Math.max(
-                    20,
-                    Math.min(100, Math.round(100 - stressLevel * 0.6 - emotionPenalty))
-                );
+                    targetScore = Math.max(
+                        20,
+                        Math.min(100, Math.round(100 - stressLevel * 0.6 - emotionPenalty))
+                    );
+                }
 
                 const nextScore = Math.round(module.score * 0.72 + targetScore * 0.28);
                 const nextTrend: 'up' | 'down' | 'stable' =
