@@ -142,4 +142,32 @@ A privacy-aware mental wellness dashboard that converts everyday health signals 
 MindPulse doesn’t diagnose.  
 It empowers.
 
+---
+
+## AI Assistant Setup (SEA-LION)
+
+The dashboard AI chatbox uses SEA-LION chat completions and reads tracked module data (visual, sleep, environmental, and module scores).
+
+Create a local env file:
+
+```bash
+cp .env.example .env.local
+```
+
+Add the following values in `.env.local`:
+
+```bash
+VITE_SEALION_API_KEY=your_sea_lion_api_key
+VITE_SEALION_MODEL=aisingapore/Gemma-SEA-LION-v4-27B-IT
+VITE_SEALION_BASE_URL=https://api.sea-lion.ai/v1
+```
+
+Then run:
+
+```bash
+npm run dev
+```
+
+Important security note: any `VITE_*` variable is bundled into frontend code and visible to users. This is acceptable for local testing, but production deployments should move SEA-LION requests behind a backend proxy to protect API keys and enforce server-side rate limits.
+
 And in a world of burnout, overload, and constant noise — that clarity is powerful.
