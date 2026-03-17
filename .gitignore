@@ -21,6 +21,12 @@ pnpm-debug.log*
 .env
 .env.*
 !.env.example
+.venv/
+venv/
+
+# Python cache
+__pycache__/
+*.pyc
 
 # OS files
 .DS_Store
