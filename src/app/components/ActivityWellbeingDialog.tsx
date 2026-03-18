@@ -1,7 +1,7 @@
 import {
   ActivityFeatures,
   predictMentalWellbeing,
-} from "../../lib/active/activityLinearModel";
+} from "../../lib/activity/activityLinearModel";
 import {
   ModuleDialogBase,
   ScoreCircle,
