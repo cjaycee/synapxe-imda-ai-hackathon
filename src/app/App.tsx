@@ -3,7 +3,7 @@ import { CloudSun, Moon, Activity, Eye, LucideIcon } from 'lucide-react';
 import { DashboardNav } from './components/DashboardNav';
 import { HealthScoreHero } from './components/HealthScoreHero';
 import { HealthModuleCard } from './components/HealthModuleCard';
-import { FacialTrackingLogs } from './components/FacialTrackingLogs';
+import { DailyPulseCheckIn } from './components/DailyPulseCheckIn';
 import { AIHealthAssistant } from './components/AIHealthAssistant';
 import { VisualSignalsDialog } from './components/VisualSignalsDialog';
 import { SleepActivityDialog, type SleepScoreUpdate } from './components/SleepActivityDialog';
@@ -32,11 +32,13 @@ interface HealthModule {
 }
 
 const OVERALL_SCORE_WEIGHTS: Record<string, number> = {
-  visual: 0.18,
-  activity: 0.32,
-  sleep: 0.27,
-  environmental: 0.23,
+  visual: 0.17,
+  activity: 0.30,
+  sleep: 0.25,
+  environmental: 0.20,
 };
+
+const SUBJECTIVE_SCORE_WEIGHT = 0.08;
 
 export default function App() {
   const [modules, setModules] = useState<HealthModule[]>([
@@ -86,9 +88,10 @@ export default function App() {
   const [visualContext, setVisualContext] = useState<VisualContext | null>(null);
   const [sleepContext, setSleepContext] = useState<SleepContext | null>(null);
   const [environmentalContext, setEnvironmentalContext] = useState<EnvironmentalContext | null>(null);
+  const [subjectiveScore, setSubjectiveScore] = useState<number | null>(null);
 
   const overallMentalHealthScore = useMemo(() => {
-    const { weightedSum, weightTotal } = modules.reduce(
+    const moduleTotals = modules.reduce(
       (acc, module) => {
         const weight = OVERALL_SCORE_WEIGHTS[module.id] ?? 0;
         return {
@@ -99,11 +102,19 @@ export default function App() {
       { weightedSum: 0, weightTotal: 0 }
     );
 
+    let weightedSum = moduleTotals.weightedSum;
+    let weightTotal = moduleTotals.weightTotal;
+
+    if (subjectiveScore != null) {
+      weightedSum += subjectiveScore * SUBJECTIVE_SCORE_WEIGHT;
+      weightTotal += SUBJECTIVE_SCORE_WEIGHT;
+    }
+
     if (weightTotal === 0) return 0;
 
     const weightedAverage = weightedSum / weightTotal;
     return Math.round(Math.max(0, Math.min(100, weightedAverage)));
-  }, [modules]);
+  }, [modules, subjectiveScore]);
 
   const healthContext = useMemo(
     () =>
@@ -325,10 +336,10 @@ export default function App() {
           </div>
         </div>
 
-        {/* Bottom Section: Facial Tracking & AI Assistant */}
+        {/* Bottom Section: Daily Pulse & AI Assistant */}
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2">
-            <FacialTrackingLogs />
+            <DailyPulseCheckIn onSubjectiveScoreChange={setSubjectiveScore} />
           </div>
           <div className="lg:col-span-1">
             <AIHealthAssistant healthContext={healthContext} />
