@@ -2,7 +2,7 @@
 
 MindPulse is a next-generation mental wellness dashboard built for ambitious students and driven professionals who want clarity, not clutter.
 
-It transforms everyday health signals into one simple, powerful mental wellbeing score — backed by trends, insights, and AI-supported recommendations you can actually use.
+It transforms everyday health signals into one simple, powerful Overall MindPulse Score — backed by trends, insights, and AI-supported recommendations you can actually use.
 
 No overwhelming charts.  
 No clinical jargon.  
@@ -28,9 +28,9 @@ It doesn’t just track your wellbeing — it explains it.
 
 # 🧠 Core Experience
 
-At the center of MindPulse is a dynamic **Mental Wellness Score** — a live reflection of how your body and routines are influencing your mind.
+At the center of MindPulse is a dynamic **Overall MindPulse Score** — a live reflection of how your routines, signals, and surroundings influence your mind.
 
-Behind that score are five powerful modules:
+Behind that score are four core modules and two supporting experiences:
 
 ---
 
@@ -38,69 +38,83 @@ Behind that score are five powerful modules:
 
 Camera-based, consent-driven analysis provides insights into:
 
-- Facial expression patterns  
-- Stress estimation  
-- rPPG-derived physiological readings  
+- Dominant facial emotion and confidence  
+- Stress estimation from expression patterns  
+- Rolling wellness snapshots across 1 min, 15 min, 30 min, 1 hour, 12 hours, and 1 day windows  
 
-All processed locally, with privacy front and center.  
-This module brings subtle, passive signals into meaningful awareness — without friction.
-
----
-
-## 💓 2. Physiological Signals
-
-Your body speaks before your mind feels it.
-
-This module surfaces:
-
-- Heart rate  
-- Respiration  
-- Fatigue levels  
-- Signal confidence  
-
-It helps you see whether you're calm, strained, or well-regulated — in real time.
+All visual processing runs locally in real time, with privacy controls built in.  
+This module turns passive facial cues into meaningful awareness without adding friction.
 
 ---
 
-## 😴 3. Sleep & Activity
+## 🚶 2. Activity Wellbeing
 
-Recovery is performance.
+Movement patterns are a strong predictor of mental energy.
 
 This module tracks:
 
-- Sleep duration  
-- Sleep quality  
-- Activity levels  
-- Environmental disruptions (like noise)  
+- Daily step count  
+- Mean heart rate  
+- Active-time percentage  
 
-Perfect for students pulling late nights and professionals juggling demanding schedules.
-
----
-
-## ❤️ 4. Cardiovascular & Early Recovery Signals
-
-Mental strain often overlaps with physical recovery.
-
-MindPulse highlights:
-
-- Resting heart rate trends  
-- HRV patterns  
-- Low-risk illness indicators  
-
-This helps users distinguish between emotional stress and broader recovery issues — so they respond appropriately.
+A model converts activity features into a mental wellbeing score so users can quickly see whether their routine is supporting recovery and focus.
 
 ---
 
-## 🤖 5. AI Health Assistant
+## 😴 3. Sleep Readings
 
-The brain behind the dashboard.
+Recovery quality drives next-day clarity and resilience.
 
-Your AI assistant:
+This module tracks:
 
-- Explains why your score changed  
-- Connects patterns across modules  
-- Suggests realistic improvements  
-- Helps you reflect on weekly trends  
+- Time asleep  
+- Sleep heart-rate profile  
+- Overnight movement and restlessness  
+- Predicted sleep quality score with confidence  
+
+It combines dataset-informed modeling with realistic generated inputs to produce practical sleep insights that are easy to act on.
+
+---
+
+## 🌤️ 4. Environmental Context
+
+Your environment affects cognitive load and emotional regulation.
+
+This module tracks:
+
+- Temperature  
+- Ambient noise  
+- Air quality (AQI)  
+- Weather-related mood effects  
+
+A regression-based environment model translates these factors into an environmental wellbeing score and trend.
+
+---
+
+## 📝 Supporting Experience: Daily Pulse Check-In & Reflection Log
+
+MindPulse includes a daily self-check-in to capture how users feel beyond sensor data.
+
+Users can:
+
+- Submit one check-in per day for mood, stress, and energy  
+- Add an optional short reflection and keep it stored locally  
+- Review reflection history over time  
+
+This check-in also contributes to the **Overall MindPulse Score**, so subjective wellbeing is reflected alongside passive health signals.
+
+---
+
+## 🤖 Supporting Experience: AI Health Assistant
+
+The assistant interprets dashboard context across enabled modules and gives concise, practical guidance.
+
+It helps users:
+
+- Explain why your score changed  
+- Connect patterns across modules  
+- Suggest realistic, safe improvements  
+- Reflect on trends and practical next steps  
 
 It feels less like a report — and more like guidance.
 
@@ -146,7 +160,7 @@ It empowers.
 
 ## AI Assistant Setup (SEA-LION)
 
-The dashboard AI chatbox uses SEA-LION chat completions and reads tracked module data (visual, sleep, environmental, and module scores).
+The dashboard AI chatbox uses SEA-LION chat completions and reads tracked module data (visual, activity, sleep, environmental, and module scores).
 
 Create a local env file:
 
