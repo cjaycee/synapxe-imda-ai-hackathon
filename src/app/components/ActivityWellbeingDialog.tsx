@@ -120,23 +120,14 @@ export function ActivityWellbeingDialog({
       open={open}
       onOpenChange={onOpenChange}
       icon={BarChart2}
-      title="Physiological Signals"
+      title="Activity Wellbeing"
       description="Physical activity, posture, and heart rate tracking for mental wellbeing"
       headerGradient="bg-gradient-to-r from-pink-600 to-purple-600"
       isEnabled={isEnabled}
       onToggle={onToggle}
-      headerAction={{
-        label: "Connect to Wearable",
-      }}
       footerActions={[
-        {
-          label: isGenerating ? "Generating..." : "Generate Mock Activity",
-          icon: Sparkles,
-          onClick: handleGenerate,
-        },
         { label: "View Activity Logs", icon: FileText },
         { label: "Export Report", icon: Download },
-        { label: "Pause Tracking", icon: PauseCircle },
         { label: "Delete Activity Data", icon: Trash2, danger: true },
       ]}
     >
@@ -216,7 +207,7 @@ export function ActivityWellbeingDialog({
       {/* ── Trend Chart ─────────────────────────────── */}
       <TrendChartSection
         data={trendData}
-        title="7-Day Physiological Signals Trend"
+        title="7-Day Activity Wellbeing Trend"
         chartColor="#ec4899"
         yLabel="Score"
         yDomain={[0, 100]}
@@ -230,7 +221,7 @@ export function ActivityWellbeingDialog({
         bulletColor="bg-pink-400"
         insights={[
           {
-            text: "Model updated physiological readings from the latest activity feature set.",
+            text: "Model updated activity wellbeing metrics from the latest feature set.",
           },
           {
             text:

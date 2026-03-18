@@ -98,14 +98,14 @@ export function MetricCard({ metric }: { metric: MetricCardData }) {
     metric.trend === "up"
       ? TrendingUp
       : metric.trend === "down"
-      ? TrendingDown
-      : Minus;
+        ? TrendingDown
+        : Minus;
   const trendColor =
     metric.trend === "up"
       ? "text-green-500"
       : metric.trend === "down"
-      ? "text-red-400"
-      : "text-gray-400";
+        ? "text-red-400"
+        : "text-gray-400";
 
   return (
     <Card
@@ -342,9 +342,8 @@ export function ModuleDialogBase({
                   }
                 >
                   <span
-                    className={`mr-1.5 inline-block h-1.5 w-1.5 rounded-full ${
-                      isEnabled ? "animate-pulse bg-green-300" : "bg-gray-300"
-                    }`}
+                    className={`mr-1.5 inline-block h-1.5 w-1.5 rounded-full ${isEnabled ? "animate-pulse bg-green-300" : "bg-gray-300"
+                      }`}
                   />
                   {isEnabled ? "Active" : "Paused"}
                 </Badge>
@@ -369,13 +368,15 @@ export function ModuleDialogBase({
           </div>
 
           {/* ── Privacy Footer ──────────────────────────── */}
-          <div className="shrink-0 border-t bg-white px-6 py-2.5">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-start gap-2">
-                <Lock className="mt-px h-3 w-3 shrink-0 text-gray-400" />
-                <p className="text-[10px] leading-snug text-gray-500">
-                  {privacyNote}
-                </p>
+          <div className="shrink-0 border-t bg-white px-6 py-3.5 sm:min-h-[76px]">
+            <div className="flex flex-col gap-3 sm:min-h-[48px] sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0 flex-1 sm:max-w-[42%]">
+                <div className="flex items-start gap-2">
+                  <Lock className="mt-px h-3 w-3 shrink-0 text-gray-400" />
+                  <p className="max-w-full text-[10px] leading-snug text-gray-500">
+                    {privacyNote}
+                  </p>
+                </div>
               </div>
               <div className="flex flex-wrap items-center gap-2 shrink-0">
                 {footerActions.map((action) => (

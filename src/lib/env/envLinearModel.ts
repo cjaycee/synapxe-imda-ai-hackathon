@@ -153,17 +153,12 @@ function computeRegressionBaseline(input: EnvModelInput): number {
 }
 
 function computeContextualAdjustment(input: EnvModelInput): number {
-    const lightLux = input.lightLux ?? 450;
     const temperaturePenalty = comfortPenalty(input.temperatureC, 23, 30, 8, 4.8);
     const temperatureBonus = comfortBonus(input.temperatureC, 23, 27, 6.8);
     const coolTemperatureBonus = clamp((28 - input.temperatureC) / 6, 0, 1.4);
     const warmTropicalPenalty = clamp(((input.temperatureC - 31) / 4) * 2.2, 0, 2.2);
     const severeHeatPenalty = clamp(((input.temperatureC - 34) / 3) * 5.2, 0, 5.2);
     const severeColdPenalty = clamp(((20 - input.temperatureC) / 4.5) * 3.4, 0, 3.4);
-    const lightPenalty = comfortPenalty(lightLux, 300, 650, 220, 10.5);
-    const lightBonus = comfortBonus(lightLux, 320, 620, 2.9);
-    const dimPenalty = clamp(((200 - lightLux) / 140) * 4.2, 0, 4.2);
-    const glarePenalty = clamp(((lightLux - 850) / 250) * 4.8, 0, 4.8);
     const noisePenalty = clamp(((input.noiseDb - 48) / 22) * 6.2, 0, 6.2);
     const noiseBonus = clamp((48 - input.noiseDb) / 22, 0, 1);
     const airPenalty = clamp(((input.airQualityAqi - 45) / 70) * 9.5, 0, 9.5);
@@ -182,7 +177,6 @@ function computeContextualAdjustment(input: EnvModelInput): number {
     let adjustment =
         temperatureBonus +
         coolTemperatureBonus +
-        lightBonus +
         noiseBonus +
         airBonus +
         sunnyBonus +
@@ -191,9 +185,6 @@ function computeContextualAdjustment(input: EnvModelInput): number {
         warmTropicalPenalty -
         severeHeatPenalty -
         severeColdPenalty -
-        lightPenalty -
-        dimPenalty -
-        glarePenalty -
         noisePenalty -
         airPenalty -
         severeAirPenalty;
@@ -210,47 +201,13 @@ function computeContextualAdjustment(input: EnvModelInput): number {
         adjustment -= 1.8;
     }
 
-    if (lightLux < 180 && input.weatherPenalty >= 5) {
-        adjustment -= 1.4;
-    }
-
-    if (lightLux > 900 && input.temperatureC > 32) {
-        adjustment -= 1.6;
-    }
-
-    if (
-        lightLux >= 320 &&
-        lightLux <= 620 &&
-        input.temperatureC >= 22 &&
-        input.temperatureC <= 29 &&
-        input.noiseDb < 48 &&
-        input.airQualityAqi < 45 &&
-        weatherMood >= 0
-    ) {
-        adjustment += 6.2;
-    }
-
-    if (
-        lightLux >= 360 &&
-        lightLux <= 560 &&
-        input.temperatureC >= 22 &&
-        input.temperatureC <= 27 &&
-        input.noiseDb < 44 &&
-        input.airQualityAqi < 35 &&
-        weatherMood >= 0
-    ) {
-        adjustment += 3.4;
-    }
-
     const microVariation = Math.sin(
         input.temperatureC * 0.55 +
-        lightLux * 0.006 +
         input.noiseDb * 0.12 +
         input.airQualityAqi * 0.04 +
         weatherMood * 0.7,
     ) * 1.1 + Math.cos(
         input.temperatureC * 0.35 +
-        lightLux * 0.0025 -
         input.airQualityAqi * 0.05,
     ) * 0.6;
 
@@ -265,8 +222,6 @@ export interface EnvModelInput {
     airQualityAqi: number;
     weatherPenalty: number;     // precipitation proxy – used only by regression baseline
     weatherMoodEffect?: number; // contextual mood impact from weather (positive = uplift)
-    /** lightLux is not a model feature but accepted for API compatibility */
-    lightLux?: number;
 }
 
 /**
