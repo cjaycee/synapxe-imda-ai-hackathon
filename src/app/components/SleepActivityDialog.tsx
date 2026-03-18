@@ -141,9 +141,6 @@ export function SleepActivityDialog({
       headerGradient="bg-gradient-to-r from-indigo-600 to-blue-600"
       isEnabled={isEnabled}
       onToggle={onToggle}
-      headerAction={{
-        label: "Connect to Wearable",
-      }}
       footerActions={[
         {
           label: isGenerating ? "Generating..." : "Generate Mock Reading",

@@ -62,7 +62,7 @@ export default function App() {
             icon: Moon,
             score: 72,
             subtitle: 'Sleep quality below weekly average',
-            enabled: false,
+            enabled: true,
             trend: 'down',
             accentColor: 'bg-gradient-to-br from-indigo-500 to-blue-500',
         },
@@ -238,19 +238,6 @@ export default function App() {
         );
     };
 
-    const connectSleepWearable = () => {
-        setModules((prev) =>
-            prev.map((module) =>
-                module.id === 'sleep'
-                    ? {
-                        ...module,
-                        subtitle: 'Wearable connected (mock)',
-                    }
-                    : module
-            )
-        );
-    };
-
     const updateEnvironmentalModule = ({
         score,
         trend,
@@ -308,8 +295,6 @@ export default function App() {
                                 subtitle={module.subtitle}
                                 isEnabled={module.enabled}
                                 onToggle={() => toggleModule(module.id)}
-                                topActionLabel={module.id === 'sleep' ? 'Connect to Wearable' : undefined}
-                                onTopActionClick={module.id === 'sleep' ? connectSleepWearable : undefined}
                                 onViewDetails={() => setOpenDialog(module.id)}
                                 trend={module.trend}
                                 accentColor={module.accentColor}
