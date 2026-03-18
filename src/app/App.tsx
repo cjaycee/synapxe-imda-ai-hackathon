@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { CloudSun, Moon, Activity, Eye, LucideIcon } from 'lucide-react';
 import { DashboardNav } from './components/DashboardNav';
 import { HealthScoreHero } from './components/HealthScoreHero';
@@ -12,8 +12,7 @@ import {
     EnvironmentDialog,
     type EnvironmentalSimulationPayload,
 } from './components/EnvironmentDialog';
-import { buildHealthContext } from '../lib/sealion/contextBuilder';
-import { type ModuleSnapshot } from '../lib/sealion/types';
+import { ActivityWellbeingDialog, ActivityScoreUpdate } from './components/ActivityWellbeingDialog';
 
 interface VisualReadings {
     dominantEmotion: string | null;
@@ -76,12 +75,19 @@ export default function App() {
             trend: 'stable',
             accentColor: 'bg-gradient-to-br from-emerald-500 to-cyan-500',
         },
+        {
+            id: 'activity',
+            title: 'Activity Wellbeing',
+            icon: Activity,
+            score: 70,
+            subtitle: 'Physical activity and posture summary',
+            enabled: true,
+            trend: 'stable',
+            accentColor: 'bg-gradient-to-br from-pink-500 to-purple-600',
+        },
     ]);
 
     const [openDialog, setOpenDialog] = useState<string | null>(null);
-    const [latestVisualReadings, setLatestVisualReadings] = useState<VisualReadings | null>(null);
-    const [latestSleepUpdate, setLatestSleepUpdate] = useState<SleepScoreUpdate | null>(null);
-    const [latestEnvironmentalUpdate, setLatestEnvironmentalUpdate] = useState<EnvironmentalSimulationPayload | null>(null);
 
     const updateVisualSignalsScore = ({
         dominantEmotion,
@@ -90,14 +96,6 @@ export default function App() {
         hasFace,
         avgScore1Min,
     }: VisualReadings) => {
-        setLatestVisualReadings({
-            dominantEmotion,
-            emotionConfidence,
-            stressLevel,
-            hasFace,
-            avgScore1Min,
-        });
-
         setModules((prev) =>
             prev.map((module) => {
                 if (module.id !== 'visual') return module;
@@ -145,12 +143,6 @@ export default function App() {
         confidence,
         reading,
     }: SleepScoreUpdate) => {
-        setLatestSleepUpdate({
-            predictedScore,
-            confidence,
-            reading,
-        });
-
         setModules((prev) =>
             prev.map((module) => {
                 if (module.id !== 'sleep') return module;
@@ -169,6 +161,38 @@ export default function App() {
                     nextScore > module.score ? 'up' : nextScore < module.score ? 'down' : 'stable';
 
                 const subtitle = `HR ${reading.heartRateBpm} bpm · ${reading.timeAsleepHours.toFixed(1)}h asleep · ${reading.movementsPerHour.toFixed(0)} mov/hr · Conf ${Math.round(confidence * 100)}%`;
+
+                return {
+                    ...module,
+                    score: nextScore,
+                    subtitle,
+                    trend: nextTrend,
+                };
+            })
+        );
+    };
+    const updateActivityScore = ({
+        predictedScore,
+        features,
+    }: ActivityScoreUpdate) => {
+        setModules((prev) =>
+            prev.map((module) => {
+                if (module.id !== 'activity') return module;
+
+                if (!module.enabled) {
+                    return {
+                        ...module,
+                        subtitle: 'Tracking paused',
+                        trend: 'stable',
+                    };
+                }
+
+                const boundedTarget = Math.max(0, Math.min(100, Math.round(predictedScore)));
+                const nextScore = boundedTarget;
+                const nextTrend: 'up' | 'down' | 'stable' =
+                    nextScore > module.score ? 'up' : nextScore < module.score ? 'down' : 'stable';
+
+                const subtitle = `Steps ${features.totalSteps} · HR ${features.meanHr} bpm · Active ${(features.activeSecondsFraction * 100).toFixed(1)}%`;
 
                 return {
                     ...module,
@@ -206,8 +230,6 @@ export default function App() {
         trend,
         subtitle,
     }: EnvironmentalSimulationPayload) => {
-        setLatestEnvironmentalUpdate({ score, trend, subtitle });
-
         setModules((prev) =>
             prev.map((module) => {
                 if (module.id !== 'environmental') return module;
@@ -231,24 +253,6 @@ export default function App() {
     };
 
     const getModule = (id: string) => modules.find((m) => m.id === id)!;
-
-    const assistantContext = useMemo(
-        () =>
-            buildHealthContext({
-                modules: modules.map<ModuleSnapshot>((module) => ({
-                    id: module.id,
-                    title: module.title,
-                    score: module.score,
-                    subtitle: module.subtitle,
-                    enabled: module.enabled,
-                    trend: module.trend,
-                })),
-                visual: latestVisualReadings,
-                sleep: latestSleepUpdate,
-                environmental: latestEnvironmentalUpdate,
-            }),
-        [modules, latestVisualReadings, latestSleepUpdate, latestEnvironmentalUpdate]
-    );
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -283,12 +287,12 @@ export default function App() {
                 </div>
 
                 {/* Bottom Section: Facial Tracking & AI Assistant */}
-                <div className="grid gap-6 lg:grid-cols-5">
+                <div className="grid gap-6 lg:grid-cols-3">
                     <div className="lg:col-span-2">
                         <FacialTrackingLogs />
                     </div>
-                    <div className="lg:col-span-3">
-                        <AIHealthAssistant healthContext={assistantContext} />
+                    <div className="lg:col-span-1">
+                        <AIHealthAssistant />
                     </div>
                 </div>
             </main>
@@ -324,6 +328,15 @@ export default function App() {
                 isEnabled={getModule('environmental').enabled}
                 onToggle={() => toggleModule('environmental')}
                 onSimulationUpdate={updateEnvironmentalModule}
+            />
+
+            <ActivityWellbeingDialog
+                open={openDialog === 'activity'}
+                onOpenChange={(open) => !open && setOpenDialog(null)}
+                isEnabled={getModule('activity').enabled}
+                currentScore={getModule('activity').score}
+                onToggle={() => toggleModule('activity')}
+                onScoreUpdate={updateActivityScore}
             />
         </div>
     );
