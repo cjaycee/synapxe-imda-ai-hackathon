@@ -179,6 +179,10 @@ VITE_SEALION_BASE_URL=https://api.sea-lion.ai/v1
 Then run:
 
 ```bash
+npm i
+```
+
+```bash
 npm run dev
 ```
 
