@@ -154,13 +154,6 @@ export function DailyPulseCheckIn({ onSubjectiveScoreChange }: DailyPulseCheckIn
                 )}
               </div>
 
-              <Button
-                type="button"
-                onClick={() => setHistoryOpen(true)}
-                className="bg-emerald-600 text-white hover:bg-emerald-700"
-              >
-                View Reflection History
-              </Button>
             </div>
           ) : (
             <form className="space-y-5" onSubmit={handleSubmit}>
@@ -245,6 +238,16 @@ export function DailyPulseCheckIn({ onSubjectiveScoreChange }: DailyPulseCheckIn
                 Submit Daily Check-In
               </Button>
             </form>
+          )}
+
+          {entries.length > 0 && (
+            <Button
+              type="button"
+              onClick={() => setHistoryOpen(true)}
+              className="mt-5 bg-emerald-600 text-white hover:bg-emerald-700"
+            >
+              View Reflection History
+            </Button>
           )}
 
           <div className="mt-5 flex items-start gap-3 rounded-lg border border-teal-200 bg-teal-50 p-4">
