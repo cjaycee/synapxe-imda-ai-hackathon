@@ -122,9 +122,9 @@ export function VisualSignalsDialog({
     negEmotions.forEach((e) => {
       stressScore += (expressions as unknown as Record<string, number>)[e] || 0;
     });
-    
+
     const calculatedStress = stressScore * 100 * 1.5;
-    
+
     return Math.min(100, Math.round(calculatedStress));
   };
 
@@ -146,7 +146,7 @@ export function VisualSignalsDialog({
 
   const handleRandomizeScore = (label: string) => {
     const randomVal = Math.floor(Math.random() * (95 - 45 + 1)) + 45;
-    setAverages(prev => prev.map(avg => 
+    setAverages(prev => prev.map(avg =>
       avg.label === label ? { ...avg, value: randomVal, isEstimate: false } : avg
     ));
 
@@ -231,7 +231,7 @@ export function VisualSignalsDialog({
     let lastFaceSeen = Date.now();
     let lastStateUpdate = 0;
     let lastScoreUpdate = 0;
-    
+
     const detect = async () => {
       if (!loopActiveRef.current) return;
 
@@ -251,7 +251,7 @@ export function VisualSignalsDialog({
       }
 
       const now = Date.now();
-      
+
       if (results) {
         lastFaceSeen = now;
 
@@ -263,10 +263,10 @@ export function VisualSignalsDialog({
             const currentEmotion = sorted[0][0];
             const currentConfidence = sorted[0][1];
             setDominantEmotion({ emotion: currentEmotion, score: currentConfidence });
-            
+
             const nextStress = calculateStress(expressions);
             setStressLevel(nextStress);
-            
+
             // Only update historical scores and emit avg every 1 minute
             let avgScore1Min: number | undefined;
             if (now - lastScoreUpdate > 60_000) {
@@ -351,183 +351,181 @@ export function VisualSignalsDialog({
         footerActions={[
           { label: "Review Screenshots", icon: ImageIcon },
           { label: "Export Data", icon: Download },
-          { label: "Pause Tracking", icon: PauseCircle },
           { label: "Delete Visual Data", icon: Trash2, danger: true },
         ]}
       >
-      {/* ── Live Camera Feed ───────────────────────── */}
-      <div>
-        <div className="mb-2.5 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-700">Live Camera Feed</h3>
-          <div className="flex items-center gap-2">
-            <Badge className="border-red-200 bg-red-50 text-red-600 hover:bg-red-50 text-xs">
-              <span className="mr-1.5 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-red-500" />
-              Recording
-            </Badge>
-            <Badge variant="outline" className="text-[10px] text-gray-500">
-              30 FPS · Local
-            </Badge>
+        {/* ── Live Camera Feed ───────────────────────── */}
+        <div>
+          <div className="mb-2.5 flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-gray-700">Live Camera Feed</h3>
+            <div className="flex items-center gap-2">
+              <Badge className="border-red-200 bg-red-50 text-red-600 hover:bg-red-50 text-xs">
+                <span className="mr-1.5 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-red-500" />
+                Recording
+              </Badge>
+              <Badge variant="outline" className="text-[10px] text-gray-500">
+                30 FPS · Local
+              </Badge>
+            </div>
           </div>
-        </div>
 
-        <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 shadow-inner">
-          <div className="relative flex h-72 flex-col items-center justify-center">
-            <video
-              ref={displayVideoRef}
-              autoPlay
-              muted
-              playsInline
-              className="absolute inset-0 h-full w-full object-cover rounded-xl"
-            />
-            {(!isVideoReady || !isModelsLoaded) && (
-              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-gray-900/80 backdrop-blur-sm gap-4">
-                {/* Pulsing ring */}
-                <div className="relative">
-                  <div className="absolute inset-0 animate-ping rounded-full bg-purple-500/20" />
-                  <div className="flex h-20 w-20 items-center justify-center rounded-full bg-purple-600/25 ring-1 ring-purple-400/40 backdrop-blur-sm">
-                    <Camera className="h-9 w-9 text-purple-300" />
+          <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 shadow-inner">
+            <div className="relative flex h-72 flex-col items-center justify-center">
+              <video
+                ref={displayVideoRef}
+                autoPlay
+                muted
+                playsInline
+                className="absolute inset-0 h-full w-full object-cover rounded-xl"
+              />
+              {(!isVideoReady || !isModelsLoaded) && (
+                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-gray-900/80 backdrop-blur-sm gap-4">
+                  {/* Pulsing ring */}
+                  <div className="relative">
+                    <div className="absolute inset-0 animate-ping rounded-full bg-purple-500/20" />
+                    <div className="flex h-20 w-20 items-center justify-center rounded-full bg-purple-600/25 ring-1 ring-purple-400/40 backdrop-blur-sm">
+                      <Camera className="h-9 w-9 text-purple-300" />
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm text-gray-300">Live Camera Feed</p>
+                    <p className="mt-1 text-xs text-gray-500">
+                      {!isModelsLoaded ? "Loading AI models..." : "Face detection initialising · Awaiting stable frame"}
+                    </p>
                   </div>
                 </div>
-                <div className="text-center">
-                  <p className="text-sm text-gray-300">Live Camera Feed</p>
-                  <p className="mt-1 text-xs text-gray-500">
-                    {!isModelsLoaded ? "Loading AI models..." : "Face detection initialising · Awaiting stable frame"}
-                  </p>
+              )}
+            </div>
+
+            {/* Corner brackets */}
+            <div className="absolute left-5 top-5 h-8 w-8 rounded-tl-md border-l-2 border-t-2 border-purple-400/50" />
+            <div className="absolute right-5 top-5 h-8 w-8 rounded-tr-md border-r-2 border-t-2 border-purple-400/50" />
+            <div className="absolute bottom-5 left-5 h-8 w-8 rounded-bl-md border-b-2 border-l-2 border-purple-400/50" />
+            <div className="absolute bottom-5 right-5 h-8 w-8 rounded-br-md border-b-2 border-r-2 border-purple-400/50" />
+
+            {/* Bottom info bar */}
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent px-5 py-3">
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] text-gray-400">
+                  Visual AI Engine v2.1 · Local Processing Only
+                </p>
+                <div className="flex items-center gap-1.5">
+                  <Zap className="h-3 w-3 text-purple-400" />
+                  <span className="text-[10px] text-purple-400">AI Ready</span>
                 </div>
-              </div>
-            )}
-          </div>
-
-          {/* Corner brackets */}
-          <div className="absolute left-5 top-5 h-8 w-8 rounded-tl-md border-l-2 border-t-2 border-purple-400/50" />
-          <div className="absolute right-5 top-5 h-8 w-8 rounded-tr-md border-r-2 border-t-2 border-purple-400/50" />
-          <div className="absolute bottom-5 left-5 h-8 w-8 rounded-bl-md border-b-2 border-l-2 border-purple-400/50" />
-          <div className="absolute bottom-5 right-5 h-8 w-8 rounded-br-md border-b-2 border-r-2 border-purple-400/50" />
-
-          {/* Bottom info bar */}
-          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent px-5 py-3">
-            <div className="flex items-center justify-between">
-              <p className="text-[10px] text-gray-400">
-                Visual AI Engine v2.1 · Local Processing Only
-              </p>
-              <div className="flex items-center gap-1.5">
-                <Zap className="h-3 w-3 text-purple-400" />
-                <span className="text-[10px] text-purple-400">AI Ready</span>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* ── Supporting Cards ────────────────────────── */}
-      <div className="grid gap-4 sm:grid-cols-2">
-        {/* Emotion */}
-        <Card className="border-l-4 border-l-purple-300 bg-white p-5 shadow-none">
-          <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-gray-800">Emotion</h3>
-            <span className={`inline-block h-2 w-2 rounded-full ${dominantEmotion ? 'bg-purple-500' : 'bg-gray-300 animate-pulse'}`} />
-          </div>
-          <div className="flex h-20 flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-100 bg-gray-50">
-            {dominantEmotion ? (
-              <>
-                <div className="text-xl font-medium capitalize text-purple-700">
-                  {dominantEmotion.emotion}
-                </div>
-                <p className="text-[11px] text-gray-500">{Math.round(dominantEmotion.score * 100)}% Confidence</p>
-              </>
-            ) : (
-              <>
-                <div className="h-6 w-6 rounded-full bg-gray-200 opacity-60" />
-                <p className="text-[11px] text-gray-400">Awaiting signal…</p>
-              </>
-            )}
-          </div>
-          <p className="mt-2.5 text-center text-[10px] text-gray-400">
-            Neutral · Happy · Sad · Angry · Surprised
-          </p>
-        </Card>
-
-        {/* Stress Levels */}
-        <Card className="border-l-4 border-l-fuchsia-300 bg-white p-5 shadow-none">
-          <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-gray-800">Stress Levels</h3>
-            <span className={`inline-block h-2 w-2 rounded-full ${dominantEmotion ? 'bg-fuchsia-500' : 'bg-gray-300 animate-pulse'}`} />
-          </div>
-          <div className="flex h-20 flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-100 bg-gray-50 px-4">
-            {dominantEmotion ? (
-              <>
-                <div className="flex w-full items-center justify-between mb-1">
-                  <span className="text-xs font-medium text-gray-700">Level</span>
-                  <span className="text-xs font-bold text-fuchsia-600">{stressLevel}%</span>
-                </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
-                  <div 
-                    className="h-full bg-gradient-to-r from-fuchsia-400 to-fuchsia-600 transition-all duration-500" 
-                    style={{ width: `${stressLevel}%` }}
-                  />
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="h-2.5 w-24 rounded-full bg-gray-200 opacity-60" />
-                <p className="text-[11px] text-gray-400">Calibrating…</p>
-              </>
-            )}
-          </div>
-          <p className="mt-2.5 text-center text-[10px] text-gray-400">
-            Low · Moderate · High · Critical
-          </p>
-        </Card>
-      </div>
-
-      {/* ── Average Scores ────────────────────────── */}
-      <Card className="border-l-4 border-l-violet-300 bg-white p-5 shadow-none">
-        <div className="mb-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <BarChart3 className="h-4 w-4 text-violet-500" />
-            <h3 className="text-sm font-semibold text-gray-800">Average Scores</h3>
-          </div>
-          <span className={`inline-block h-2 w-2 rounded-full ${dominantEmotion ? 'bg-violet-500' : 'bg-gray-300 animate-pulse'}`} />
-        </div>
-        <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
-          {averages.map((avg) => (
-            <button
-              key={avg.label}
-              onClick={() => handleRandomizeScore(avg.label)}
-              className="flex flex-col items-center gap-1 rounded-lg border border-gray-100 bg-gray-50 py-3 px-2 transition-all hover:bg-violet-50 hover:border-violet-200 active:scale-95 group"
-            >
-              <div className="flex items-center gap-1 text-[10px] font-medium text-gray-500 group-hover:text-violet-600">
-                <Clock className="h-3 w-3" />
-                {avg.label}
-              </div>
-              <span
-                className={`text-lg font-bold ${
-                  avg.isEstimate ? 'text-gray-400' : avg.value >= 70 ? 'text-green-600' : avg.value >= 45 ? 'text-yellow-600' : 'text-orange-600'
-                }`}
-              >
-                {avg.value}
-              </span>
-              {avg.isEstimate && (
-                <span className="text-[9px] text-gray-400 group-hover:text-violet-400">(est.)</span>
+        {/* ── Supporting Cards ────────────────────────── */}
+        <div className="grid gap-4 sm:grid-cols-2">
+          {/* Emotion */}
+          <Card className="border-l-4 border-l-purple-300 bg-white p-5 shadow-none">
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-gray-800">Emotion</h3>
+              <span className={`inline-block h-2 w-2 rounded-full ${dominantEmotion ? 'bg-purple-500' : 'bg-gray-300 animate-pulse'}`} />
+            </div>
+            <div className="flex h-20 flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-100 bg-gray-50">
+              {dominantEmotion ? (
+                <>
+                  <div className="text-xl font-medium capitalize text-purple-700">
+                    {dominantEmotion.emotion}
+                  </div>
+                  <p className="text-[11px] text-gray-500">{Math.round(dominantEmotion.score * 100)}% Confidence</p>
+                </>
+              ) : (
+                <>
+                  <div className="h-6 w-6 rounded-full bg-gray-200 opacity-60" />
+                  <p className="text-[11px] text-gray-400">Awaiting signal…</p>
+                </>
               )}
-            </button>
-          ))}
-        </div>
-        <p className="mt-2.5 text-center text-[10px] text-gray-400">
-          Wellness score (0–100) · higher is better · inverted from stress level
-        </p>
-      </Card>
+            </div>
+            <p className="mt-2.5 text-center text-[10px] text-gray-400">
+              Neutral · Happy · Sad · Angry · Surprised
+            </p>
+          </Card>
 
-      {/* ── AI Insights ─────────────────────────────── */}
-      <InsightsCard
-        accentBg="bg-purple-50"
-        accentBorder="border-purple-100"
-        accentTitle="text-purple-700"
-        bulletColor="bg-purple-400"
-        badge={dominantEmotion ? "Active" : "Pending"}
-        insights={
-          dominantEmotion
-            ? [
+          {/* Stress Levels */}
+          <Card className="border-l-4 border-l-fuchsia-300 bg-white p-5 shadow-none">
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-gray-800">Stress Levels</h3>
+              <span className={`inline-block h-2 w-2 rounded-full ${dominantEmotion ? 'bg-fuchsia-500' : 'bg-gray-300 animate-pulse'}`} />
+            </div>
+            <div className="flex h-20 flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-100 bg-gray-50 px-4">
+              {dominantEmotion ? (
+                <>
+                  <div className="flex w-full items-center justify-between mb-1">
+                    <span className="text-xs font-medium text-gray-700">Level</span>
+                    <span className="text-xs font-bold text-fuchsia-600">{stressLevel}%</span>
+                  </div>
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
+                    <div
+                      className="h-full bg-gradient-to-r from-fuchsia-400 to-fuchsia-600 transition-all duration-500"
+                      style={{ width: `${stressLevel}%` }}
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="h-2.5 w-24 rounded-full bg-gray-200 opacity-60" />
+                  <p className="text-[11px] text-gray-400">Calibrating…</p>
+                </>
+              )}
+            </div>
+            <p className="mt-2.5 text-center text-[10px] text-gray-400">
+              Low · Moderate · High · Critical
+            </p>
+          </Card>
+        </div>
+
+        {/* ── Average Scores ────────────────────────── */}
+        <Card className="border-l-4 border-l-violet-300 bg-white p-5 shadow-none">
+          <div className="mb-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4 text-violet-500" />
+              <h3 className="text-sm font-semibold text-gray-800">Average Scores</h3>
+            </div>
+            <span className={`inline-block h-2 w-2 rounded-full ${dominantEmotion ? 'bg-violet-500' : 'bg-gray-300 animate-pulse'}`} />
+          </div>
+          <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
+            {averages.map((avg) => (
+              <button
+                key={avg.label}
+                onClick={() => handleRandomizeScore(avg.label)}
+                className="flex flex-col items-center gap-1 rounded-lg border border-gray-100 bg-gray-50 py-3 px-2 transition-all hover:bg-violet-50 hover:border-violet-200 active:scale-95 group"
+              >
+                <div className="flex items-center gap-1 text-[10px] font-medium text-gray-500 group-hover:text-violet-600">
+                  <Clock className="h-3 w-3" />
+                  {avg.label}
+                </div>
+                <span
+                  className={`text-lg font-bold ${avg.isEstimate ? 'text-gray-400' : avg.value >= 70 ? 'text-green-600' : avg.value >= 45 ? 'text-yellow-600' : 'text-orange-600'
+                    }`}
+                >
+                  {avg.value}
+                </span>
+                {avg.isEstimate && (
+                  <span className="text-[9px] text-gray-400 group-hover:text-violet-400">(est.)</span>
+                )}
+              </button>
+            ))}
+          </div>
+          <p className="mt-2.5 text-center text-[10px] text-gray-400">
+            Wellness score (0–100) · higher is better · inverted from stress level
+          </p>
+        </Card>
+
+        {/* ── AI Insights ─────────────────────────────── */}
+        <InsightsCard
+          accentBg="bg-purple-50"
+          accentBorder="border-purple-100"
+          accentTitle="text-purple-700"
+          bulletColor="bg-purple-400"
+          badge={dominantEmotion ? "Active" : "Pending"}
+          insights={
+            dominantEmotion
+              ? [
                 {
                   text: `Currently detecting ${dominantEmotion.emotion} with ${Math.round(dominantEmotion.score * 100)}% confidence.`,
                 },
@@ -535,7 +533,7 @@ export function VisualSignalsDialog({
                   text: `Stress level is currently estimated at ${stressLevel}% based on facial emotion markers.`,
                 },
               ]
-            : [
+              : [
                 {
                   text: "Awaiting stable face detection to begin real-time emotion classification.",
                 },
@@ -543,8 +541,8 @@ export function VisualSignalsDialog({
                   text: "Ensure your face is clearly visible and well-lit for accurate model inference.",
                 },
               ]
-        }
-      />
+          }
+        />
       </ModuleDialogBase>
     </>
   );

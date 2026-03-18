@@ -142,14 +142,8 @@ export function SleepActivityDialog({
       isEnabled={isEnabled}
       onToggle={onToggle}
       footerActions={[
-        {
-          label: isGenerating ? "Generating..." : "Generate Mock Reading",
-          icon: Star,
-          onClick: handleGenerate,
-        },
         { label: "View Sleep Logs", icon: FileText },
         { label: "Export Report", icon: Download },
-        { label: "Pause Tracking", icon: PauseCircle },
         { label: "Delete Activity Data", icon: Trash2, danger: true },
       ]}
     >
