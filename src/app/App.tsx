@@ -6,7 +6,6 @@ import { HealthModuleCard } from './components/HealthModuleCard';
 import { FacialTrackingLogs } from './components/FacialTrackingLogs';
 import { AIHealthAssistant } from './components/AIHealthAssistant';
 import { VisualSignalsDialog } from './components/VisualSignalsDialog';
-import { PhysiologicalSignalsDialog } from './components/PhysiologicalSignalsDialog';
 import { SleepActivityDialog, type SleepScoreUpdate } from './components/SleepActivityDialog';
 import {
     EnvironmentDialog,
@@ -48,18 +47,18 @@ export default function App() {
             accentColor: 'bg-gradient-to-br from-purple-500 to-violet-600',
         },
         {
-            id: 'physiological',
+            id: 'activity',
             title: 'Physiological Signals',
             icon: Activity,
-            score: 85,
-            subtitle: 'Heart rate and respiration stable',
+            score: 70,
+            subtitle: 'Physical activity and posture summary',
             enabled: true,
-            trend: 'up',
-            accentColor: 'bg-gradient-to-br from-teal-500 to-cyan-500',
+            trend: 'stable',
+            accentColor: 'bg-gradient-to-br from-pink-500 to-purple-600',
         },
         {
             id: 'sleep',
-            title: 'Sleep & Activity',
+            title: 'Sleep Readings',
             icon: Moon,
             score: 72,
             subtitle: 'Sleep quality below weekly average',
@@ -76,16 +75,6 @@ export default function App() {
             enabled: true,
             trend: 'stable',
             accentColor: 'bg-gradient-to-br from-emerald-500 to-cyan-500',
-        },
-        {
-            id: 'activity',
-            title: 'Activity Wellbeing',
-            icon: Activity,
-            score: 70,
-            subtitle: 'Physical activity and posture summary',
-            enabled: true,
-            trend: 'stable',
-            accentColor: 'bg-gradient-to-br from-pink-500 to-purple-600',
         },
     ]);
 
@@ -347,13 +336,6 @@ export default function App() {
                 isEnabled={getModule('visual').enabled}
                 onToggle={() => toggleModule('visual')}
                 onReadingsChange={updateVisualSignalsScore}
-            />
-
-            <PhysiologicalSignalsDialog
-                open={openDialog === 'physiological'}
-                onOpenChange={(open) => !open && setOpenDialog(null)}
-                isEnabled={getModule('physiological').enabled}
-                onToggle={() => toggleModule('physiological')}
             />
 
             <SleepActivityDialog
