@@ -12,7 +12,7 @@ export function DashboardNav() {
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-teal-500 to-blue-600">
             <Activity className="h-6 w-6 text-white" />
           </div>
-          <h1 className="text-xl font-semibold text-gray-900">Mental Health Dashboard</h1>
+          <h1 className="text-xl font-semibold text-gray-900">MindPulse</h1>
         </div>
 
         {/* Search Bar */}

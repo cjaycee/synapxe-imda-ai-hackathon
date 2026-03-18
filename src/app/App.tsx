@@ -7,10 +7,7 @@ import { FacialTrackingLogs } from './components/FacialTrackingLogs';
 import { AIHealthAssistant } from './components/AIHealthAssistant';
 import { VisualSignalsDialog } from './components/VisualSignalsDialog';
 import { SleepActivityDialog, type SleepScoreUpdate } from './components/SleepActivityDialog';
-import {
-  EnvironmentDialog,
-  type EnvironmentalSimulationPayload,
-} from './components/EnvironmentDialog';
+import { EnvironmentDialog, type EnvironmentalSimulationPayload } from './components/EnvironmentDialog';
 import { ActivityWellbeingDialog, ActivityScoreUpdate } from './components/ActivityWellbeingDialog';
 import { buildHealthContext } from '../lib/sealion/contextBuilder';
 import type { EnvironmentalContext, SleepContext, VisualContext } from '../lib/sealion/types';
@@ -33,6 +30,13 @@ interface HealthModule {
   trend: 'up' | 'down' | 'stable';
   accentColor: string;
 }
+
+const OVERALL_SCORE_WEIGHTS: Record<string, number> = {
+  visual: 0.18,
+  activity: 0.32,
+  sleep: 0.27,
+  environmental: 0.23,
+};
 
 export default function App() {
   const [modules, setModules] = useState<HealthModule[]>([
@@ -61,7 +65,7 @@ export default function App() {
       title: 'Sleep Readings',
       icon: Moon,
       score: 72,
-      subtitle: 'Sleep quality below weekly average',
+      subtitle: 'Sleep quality and patterns',
       enabled: true,
       trend: 'down',
       accentColor: 'bg-gradient-to-br from-indigo-500 to-blue-500',
@@ -82,6 +86,24 @@ export default function App() {
   const [visualContext, setVisualContext] = useState<VisualContext | null>(null);
   const [sleepContext, setSleepContext] = useState<SleepContext | null>(null);
   const [environmentalContext, setEnvironmentalContext] = useState<EnvironmentalContext | null>(null);
+
+  const overallMentalHealthScore = useMemo(() => {
+    const { weightedSum, weightTotal } = modules.reduce(
+      (acc, module) => {
+        const weight = OVERALL_SCORE_WEIGHTS[module.id] ?? 0;
+        return {
+          weightedSum: acc.weightedSum + module.score * weight,
+          weightTotal: acc.weightTotal + weight,
+        };
+      },
+      { weightedSum: 0, weightTotal: 0 }
+    );
+
+    if (weightTotal === 0) return 0;
+
+    const weightedAverage = weightedSum / weightTotal;
+    return Math.round(Math.max(0, Math.min(100, weightedAverage)));
+  }, [modules]);
 
   const healthContext = useMemo(
     () =>
@@ -123,7 +145,7 @@ export default function App() {
         if (!module.enabled) {
           return {
             ...module,
-            subtitle: 'Tracking paused',
+            // subtitle: 'Tracking paused',
             trend: 'stable',
           };
         }
@@ -176,7 +198,7 @@ export default function App() {
         if (!module.enabled) {
           return {
             ...module,
-            subtitle: 'Tracking paused',
+            // subtitle: 'Tracking paused',
             trend: 'stable',
           };
         }
@@ -208,7 +230,7 @@ export default function App() {
         if (!module.enabled) {
           return {
             ...module,
-            subtitle: 'Tracking paused',
+            // subtitle: 'Tracking paused',
             trend: 'stable',
           };
         }
@@ -218,7 +240,7 @@ export default function App() {
         const nextTrend: 'up' | 'down' | 'stable' =
           nextScore > module.score ? 'up' : nextScore < module.score ? 'down' : 'stable';
 
-        const subtitle = `Steps ${features.totalSteps} · HR ${features.meanHr} bpm · Active ${(features.activeSecondsFraction * 100).toFixed(1)}%`;
+        const subtitle = `Steps ${features.totalSteps} · HR ${features.meanHr.toFixed(1)} bpm · Active ${(features.activeSecondsFraction * 100).toFixed(1)}%`;
 
         return {
           ...module,
@@ -256,7 +278,7 @@ export default function App() {
         if (!module.enabled) {
           return {
             ...module,
-            subtitle: 'Tracking paused',
+            // subtitle: 'Tracking paused',
             trend: 'stable',
           };
         }
@@ -279,7 +301,7 @@ export default function App() {
 
       <main className="mx-auto max-w-[1400px] p-6">
         <div className="mb-8">
-          <HealthScoreHero />
+          <HealthScoreHero score={overallMentalHealthScore} />
         </div>
 
         {/* Health Modules Grid */}
