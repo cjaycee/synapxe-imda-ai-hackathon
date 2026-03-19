@@ -24,7 +24,7 @@ Add the following values in `.env.local`:
 
 ```bash
 VITE_SEALION_API_KEY=your_sea_lion_api_key
-VITE_SEALION_MODEL=aisingapore/Gemma-SEA-LION-v4-27B-IT
+VITE_SEALION_MODEL=aisingapore/Llama-SEA-LION-v3.5-70B-R
 VITE_SEALION_BASE_URL=https://api.sea-lion.ai/v1
 ```
 
